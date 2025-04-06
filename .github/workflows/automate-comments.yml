@@ -1,0 +1,43 @@
+name: Automate Issue and PR Comments
+
+on:
+  issues:
+    types: [closed]  # Käynnistyy, kun issue suljetaan
+  pull_request:
+    types: [opened]  # Käynnistyy, kun pull request luodaan
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest  # Ajetaan Ubuntu-ympäristössä
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2  # Checkout reposi koodi
+
+      - name: Add comment to closed issues
+        if: github.event_name == 'issues' && github.event.action == 'closed'
+        uses: actions/github-script@v5
+        with:
+          script: |
+            const issueComment = "The issue is now resolved.";  // Kommentti suljettuihin issueihin
+            github.issues.createComment({
+              issue_number: github.event.issue.number,
+              owner: github.repository.owner,
+              repo: github.repository.name,
+              body: issueComment
+            });
+
+      - name: Welcome comment for first pull request
+        if: github.event_name == 'pull_request' && github.event.action == 'opened'
+        uses: actions/github-script@v5
+        with:
+          script: |
+            const prNumber = github.event.pull_request.number;
+            const prAuthor = github.event.pull_request.user.login;
+            const prComment = `Congratulations on your first pull request, @${prAuthor}! 🎉`;
+
+            github.issues.createComment({
+              issue_number: prNumber,
+              owner: github.repository.owner,
+              repo: github.repository.name,
+              body: prComment
+            });
