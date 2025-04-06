@@ -31,13 +31,17 @@ jobs:
         uses: actions/github-script@v5
         with:
           script: |
-            const prNumber = github.event.pull_request.number;
-            const prAuthor = github.event.pull_request.user.login;
-            const prComment = `Congratulations on your first pull request, @${prAuthor}! 🎉`;
+            if (github.event.pull_request) {
+              const prNumber = github.event.pull_request.number;
+              const prAuthor = github.event.pull_request.user.login;
+              const prComment = `Congratulations on your first pull request, @${prAuthor}! 🎉`;
 
-            github.issues.createComment({
-              issue_number: prNumber,
-              owner: github.repository.owner,
-              repo: github.repository.name,
-              body: prComment
-            });
+              github.issues.createComment({
+                issue_number: prNumber,
+                owner: github.repository.owner,
+                repo: github.repository.name,
+                body: prComment
+              });
+            } else {
+              console.log('No pull request data available');
+            }
