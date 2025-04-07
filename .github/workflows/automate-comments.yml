@@ -2,46 +2,50 @@ name: Automate Issue and PR Comments
 
 on:
   issues:
-    types: [closed]  # Käynnistyy, kun issue suljetaan
+    types: [closed]
   pull_request:
-    types: [opened]  # Käynnistyy, kun pull request luodaan
+    types: [opened]
+
+permissions:
+  issues: write
+  pull-requests: write
 
 jobs:
   comment:
-    runs-on: ubuntu-latest  # Ajetaan Ubuntu-ympäristössä
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2  # Checkout reposi koodi
-
-      - name: Add comment to closed issues
+      - name: Comment on closed issue
         if: github.event_name == 'issues' && github.event.action == 'closed'
-        uses: actions/github-script@v5
+        uses: actions/github-script@v6
         with:
           script: |
-            const issueComment = "The issue is now resolved.";  // Kommentti suljettuihin issueihin
-            github.issues.createComment({
-              issue_number: github.event.issue.number,
-              owner: github.repository.owner,
-              repo: github.repository.name,
+            const issueComment = "The issue is now resolved.";
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
               body: issueComment
             });
 
-      - name: Welcome comment for first pull request
+      - name: Congratulate on first pull request
         if: github.event_name == 'pull_request' && github.event.action == 'opened'
-        uses: actions/github-script@v5
+        uses: actions/github-script@v6
         with:
           script: |
-            if (github.event.pull_request) {
-              const prNumber = github.event.pull_request.number;
-              const prAuthor = github.event.pull_request.user.login;
-              const prComment = `Congratulations on your first pull request, @${prAuthor}! 🎉`;
+            const { data: pulls } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100
+            });
 
-              github.issues.createComment({
-                issue_number: prNumber,
-                owner: github.repository.owner,
-                repo: github.repository.name,
-                body: prComment
+            const prAuthor = context.payload.pull_request.user.login;
+            const isFirstPR = pulls.filter(pr => pr.user.login === prAuthor).length === 1;
+
+            if (isFirstPR) {
+              await github.rest.issues.createComment({
+                issue_number: context.payload.pull_request.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `Congratulations on your first pull request, @${prAuthor}! 🎉`
               });
-            } else {
-              console.log('No pull request data available');
             }
